@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>قرعه‌کشی آنلاین</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      width: 95%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+
+    textarea {
+      width: 100%;
+      font-size: 15px;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      min-height: 200px;
+    }
+
+    input {
+      width: 100%;
+      font-size: 15px;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 8px 14px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .results, .saved-results {
+      margin-top: 15px;
+      font-size: 16px;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 8px;
+      min-height: 40px;
+      white-space: pre-wrap;
+      text-align: center;
+    }
+
+    .error {
+      color: red;
+      margin-top: 5px;
+      font-size: 14px;
+    }
+
+    .guide-panel {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 14px;
+      text-align: right;
+      display: none;
+    }
+
+    .guide-btn {
+      font-size: 14px;
+      background-color: #28a745;
+      color: white;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .guide-btn:hover {
+      background-color: #218838;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>قرعه‌کشی آنلاین</h1>
+    <textarea id="participants" placeholder="شرکت‌کنندگان را وارد کنید (هر شرکت‌کننده را در یک خط وارد کنید یا با فاصله از هم بنویسید)"></textarea>
+    <input type="number" id="winners" min="1" placeholder="تعداد برندگان">
+    <button onclick="drawWinners()">شروع قرعه‌کشی</button>
+    <button onclick="saveWinners()">ذخیره برندگان</button>
+    <button onclick="clearResults()">پاک کردن نتایج ذخیره‌شده</button>
+    <div class="results" id="results"></div>
+    <div class="saved-results" id="saved-results" style="display:none;"></div>
+    <div class="error" id="error-message"></div>
+
+    <button class="guide-btn" onclick="toggleGuide()">راهنما</button>
+    <div class="guide-panel" id="guide-panel">
+      <p>1. در بخش "شرکت‌کنندگان" می‌توانید شرکت‌کنندگان را وارد کنید. هر شرکت‌کننده را در یک خط جدید وارد کنید یا می‌توانید نام‌ها را با فاصله از هم بنویسید.</p>
+      <p>2. همچنین می‌توانید بازه‌های عددی مثل 1-20 را بنویسید تا خودکار گسترش یابد.</p>
+      <p>3. تعداد برندگان را مشخص کنید و سپس روی "شروع قرعه‌کشی" کلیک کنید.</p>
+      <p>4. نتایج برندگان پس از قرعه‌کشی به‌طور خودکار ذخیره می‌شود.</p>
+      <p>5. برای مشاهده نتایج ذخیره‌شده، از دکمه "ذخیره برندگان" استفاده کنید.</p>
+      <p>6. برای پاک کردن فقط نتایج ذخیره‌شده، دکمه "پاک کردن نتایج ذخیره‌شده" را بزنید.</p>
+      <p>‌ ابزار هوشمند قرعه کشی آنلاین ساخته شده توسط نینجا کریپتو است . آدرس کانال ما در تلگرام Ninjaa_ Crypto@ می باشد و حضور شما دلگرمی بیشتر برای ساخت ابزار ها و گیم های دیگر خواهد بود.</p>
+    </div>
+  </div>
+
+  <script>
+    let winnersList = [];
+    let savedWinners = [];
+
+    function drawWinners() {
+      const participantsInput = document.getElementById("participants").value;
+      const winnersCount = parseInt(document.getElementById("winners").value);
+      const resultsDiv = document.getElementById("results");
+      const errorDiv = document.getElementById("error-message");
+
+      resultsDiv.innerText = "";
+      errorDiv.innerText = "";
+
+      let allParticipants = participantsInput.split(/\n| /).map(p => p.trim()).filter(Boolean);
+
+      let expanded = [];
+      allParticipants.forEach(item => {
+        const match = item.match(/^(\d+)-(\d+)$/);
+        if (match) {
+          const start = parseInt(match[1]);
+          const end = parseInt(match[2]);
+          if (start <= end) {
+            for (let i = start; i <= end; i++) expanded.push(i.toString());
+          } else {
+            for (let i = start; i >= end; i--) expanded.push(i.toString());
+          }
+        } else {
+          expanded.push(item);
+        }
+      });
+      allParticipants = expanded;
+
+      if (winnersCount > allParticipants.length) {
+        errorDiv.innerText = "تعداد برندگان بیشتر از تعداد شرکت‌کنندگان است.";
+        return;
+      }
+
+      let animationTime = 5000;
+      let elapsed = 0;
+
+      const animationInterval = setInterval(() => {
+        const randomShow = [];
+        while (randomShow.length < winnersCount) {
+          const rand = allParticipants[Math.floor(Math.random() * allParticipants.length)];
+          if (!randomShow.includes(rand)) randomShow.push(rand);
+        }
+        resultsDiv.innerText = `در حال قرعه‌کشی بین ${allParticipants.length} نفر...\n${randomShow.join(', ')}`;
+        elapsed += 100;
+
+        if (elapsed >= animationTime) {
+          clearInterval(animationInterval);
+          winnersList = [];
+          while (winnersList.length < winnersCount) {
+            const r = allParticipants[Math.floor(Math.random() * allParticipants.length)];
+            if (!winnersList.includes(r)) winnersList.push(r);
+          }
+          resultsDiv.innerText = `برندگان نهایی (${winnersList.length} نفر):\n${winnersList.join(', ')}`;
+        }
+      }, 100);
+    }
+
+    function saveWinners() {
+      if (winnersList.length === 0) {
+        alert("ابتدا قرعه‌کشی را انجام دهید.");
+        return;
+      }
+
+      if (!savedWinners.includes(winnersList.join(', '))) {
+        savedWinners.unshift(winnersList.join(', '));
+      }
+
+      if (savedWinners.length > 10) savedWinners.pop();
+
+      const savedDiv = document.getElementById("saved-results");
+      savedDiv.style.display = 'block';
+      savedDiv.innerText = `۱۰ نتیجه آخر:\n\n${savedWinners.join('\n\n')}`;
+
+      // قسمت ساخت فایل و دانلود حذف شده است
+    }
+
+    function clearResults() {
+      document.getElementById("saved-results").style.display = 'none';
+      savedWinners = [];
+    }
+
+    function toggleGuide() {
+      const guidePanel = document.getElementById("guide-panel");
+      guidePanel.style.display = guidePanel.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
